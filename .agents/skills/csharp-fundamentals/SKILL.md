@@ -2,8 +2,8 @@
 name: csharp-fundamentals
 description: >-
   Day 1 Core Topic Skill: C# syntax, variables, CTS type system (Value vs Reference types, Nullable types),
-  operators, control flow (guard clauses, switch expressions), methods, parameter modifiers,
-  strings vs StringBuilder, arrays, and exception handling.
+  operators, control flow (guard clauses, switch expressions), methods, parameter modifiers (ref, out, in, params),
+  strings vs StringBuilder, arrays & collection expressions, and structured exception handling.
 ---
 
 # Day 1: C# Fundamentals & Type System
@@ -73,6 +73,46 @@ description: >-
   - `break`: Terminate the innermost loop immediately.
   - `continue`: Skip the remainder of the current iteration and evaluate the loop condition again.
 
+### Methods & Parameter Modifiers (`ref`, `out`, `in`, `params`)
+- **Default Passing (By Value)**: Value types pass bitwise copies; reference types pass pointer copies.
+- **`ref` (Two-way Reference)**:
+  - Variable must be initialized before passing.
+  - Method reads and mutates the caller's original memory storage.
+- **`out` (Output Reference)**:
+  - Variable does not need prior initialization.
+  - Method **must** assign a value before returning. Enforces the `TryParse` pattern.
+- **`in` (Read-only Reference)**:
+  - Variable is passed by reference to avoid copying large stack structures (e.g. large `readonly struct`), but compiler forbids mutation.
+- **`params` (Variadic Arguments)**:
+  - Accepts zero, one, or multiple comma-separated arguments, bundling them as an array. In C# 12, can also bind to collections like `ReadOnlySpan<T>`.
+
+### Strings vs. StringBuilder
+- **`System.String` Immutability**:
+  - Every string concatenation (`+`, `+=`) allocates a brand-new string on the Managed Heap.
+  - In high-frequency loops, this triggers thousands of garbage allocations and frequent Gen 0 GC pauses.
+- **`System.Text.StringBuilder`**:
+  - Mutable internal buffer (`char[]`) that expands dynamically.
+  - Ideal for loops, tabular report generation, and complex string assembly.
+- **String Interpolation Handler (C# 10+)**:
+  - Modern interpolated strings (`$"{emp.Name}"`) compile to `DefaultInterpolatedStringHandler` which minimizes allocations for standard one-off prints.
+
+### Arrays & Modern C# 12 Collection Expressions
+- **Collection Expressions (`[...]`)**: Modern concise syntax for initializing arrays (`string[] depts = ["HR", "IT", "Finance"];`).
+- **Indices & Ranges**:
+  - `^1` represents the last element (1 from the end).
+  - `1..3` slices a sub-array from index 1 up to (exclusive) index 3.
+- **Rectangular (`[,]`) vs Jagged (`[][]`) Arrays**:
+  - Rectangular arrays (`decimal[,]`) allocate a single contiguous block of memory with fixed dimensions.
+  - Jagged arrays (`int[][]`) are arrays of arrays, allowing rows of varying lengths and better cache locality in many CLR scenarios.
+
+### Structured Exception Handling
+- **Exception Anatomy**: `try-catch-finally`. `finally` always runs (even on return/error) for resource cleanup.
+- **Exception Filters (`when`)**: Catch exceptions conditionally without unwinding the stack (e.g., `catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)`).
+- **Rethrowing Mechanics**:
+  - ❌ `throw ex;`: Resets the stack trace to the catch line, erasing the original failure line number.
+  - ✅ `throw;`: Preserves the complete original stack trace and line numbers.
+- **Custom Exceptions**: Derive from `System.Exception`, provide standard constructors, and capture domain context (e.g., `EmployeeId`).
+
 ---
 
 ## 2. Common Pitfalls & Anti-Patterns
@@ -81,8 +121,9 @@ description: >-
 - ❌ **Deep Arrow Anti-Pattern (Nested Ifs)**: Writing nested conditionals 5 levels deep instead of using guard clauses to exit early.
 - ❌ **Modifying Collections inside `foreach`**: Calling `list.Remove()` or `list.Add()` during `foreach` iteration throws `InvalidOperationException` because the collection enumerator version is invalidated.
 - ❌ **Unsafe Casting with `(Type)` instead of `is` or `as`**: Directly casting unknown objects causes unhandled `InvalidCastException`.
+- ❌ **String Concatenation in Loops**: Doing `str += line` in loops allocates thousands of intermediate string objects on the Heap. Use `StringBuilder`.
+- ❌ **`catch (Exception ex) { throw ex; }`**: Resets the stack trace and destroys production debugging info. Always use `throw;`.
 - ❌ **Hidden Boxing in String Formatting**: Passing value types to legacy APIs like `string.Format("{0}", 42)` boxes `int` into `object`. Modern string interpolation (`$"{42}"`) avoids this via Roslyn handlers.
-- ❌ **Swallowing Exceptions / `throw ex;`**: `catch (Exception ex) { throw ex; }` destroys the original stack trace. Always use `throw;`.
 
 ---
 
@@ -96,6 +137,10 @@ description: >-
    - *Model Answer*: `const` is a compile-time constant, implicitly static, and its literal value is hardcoded into calling assemblies at compile time. `readonly` can be assigned at runtime (such as in a constructor), allowing dynamic initialization based on configuration or runtime parameters.
 4. **How do Guard Clauses improve readability over nested `if-else` statements?**
    - *Model Answer*: Guard clauses validate edge cases and invalid conditions at the top of a method, returning or throwing early. This eliminates deep indentation ("Arrow Code") and allows the happy path to flow cleanly without nested brackets.
+5. **What is the difference between `ref`, `out`, and `in` parameter modifiers?**
+   - *Model Answer*: `ref` passes an already initialized variable by reference for read/write access. `out` passes an uninitialized variable that must be assigned before the method returns. `in` passes a variable by reference as read-only to avoid copying large value types.
+6. **What is the critical difference between `throw;` and `throw ex;`?**
+   - *Model Answer*: `throw;` preserves the original stack trace and source line numbers where the error actually occurred. `throw ex;` resets the stack trace to the catch block, hiding the true origin of the bug.
 
 ---
 
@@ -137,6 +182,10 @@ description: >-
 - **Local functions cannot have access modifiers** (`public`, `private`, `internal`, `protected`) because they only exist within the local scope of the entry point.
 - Placing `public` triggers `CS0106: The modifier 'public' is not valid for this item` and confuses Roslyn's parser on the function name.
 - **Fix**: Remove `public`. Use `static decimal MethodName(...)` or simply `decimal MethodName(...)`.
+
+### Q6: Why does `throw ex;` destroy stack traces compared to `throw;`?
+- `throw ex;` passes the exception variable back to the CLR as if it were brand new, overwriting the `StackTrace` property to point to the line where `throw ex;` is located.
+- `throw;` is a special IL instruction (`rethrow`) that tells the runtime to resume unwinding the stack from the original throw point, preserving the original class, method, and source line number.
 
 ---
 
