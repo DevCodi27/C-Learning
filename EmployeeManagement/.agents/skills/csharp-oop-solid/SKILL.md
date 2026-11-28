@@ -289,6 +289,25 @@ public sealed class Contractor : IPayrollCalculable
 - Use `ArgumentOutOfRangeException.ThrowIfNegative(baseSalary)` for amounts that can be 0 but not negative.
 - If using explicit `if`, always pass `nameof(param)` first: `throw new ArgumentOutOfRangeException(nameof(id), "Must be positive.");`
 
+### Q3: Why does compiler error CS7036 occur in derived class constructors?
+- **Cause**: In C#, a derived class constructor must invoke a base class constructor before executing its own body. If no `: base(...)` is specified, the compiler implicitly attempts to call a parameterless constructor `: base()`. If the base class only has parameterized constructors (e.g., `BaseEmployee(int, string, decimal)`), compilation fails with `CS7036`.
+- **Solution (Constructor Chaining)**: The derived constructor must declare parameters matching the base class constructor and explicitly pass them using `: base(id, name, baseSalary)` or modern C# 12 primary constructor inheritance `: BaseEmployee(id, name, baseSalary)`.
+
+### Q4: Why am I confused between Interface and Abstract Class in modern C#, and how do they differ in the CLR?
+- **Mental Model ("Is-A" vs "Can-Do")**:
+  - **Abstract Class (`BaseEmployee`)**: Models shared identity, **instance state** (`Id`, `Name`, `BaseSalary`), and **constructor invariants** (`ArgumentException.ThrowIfNullOrWhiteSpace`, `ArgumentOutOfRangeException.ThrowIfNegativeOrZero`). `FullTimeEmployee` *is a* `BaseEmployee`.
+  - **Interface (`IPayrollCalculable`)**: Models a **stateless capability contract** (`CalculateMonthlyPayout()`). `Contractor` is *not* a `BaseEmployee` (no `Id` or `BaseSalary`—inheriting would violate LSP), yet both `BaseEmployee` and `Contractor` implement `IPayrollCalculable`.
+- **Why Modern C# Blurs the Line**: C# 8+ added **Default Interface Methods (DIMs)** mainly for backwards-compatible API evolution, not to replace abstract classes. Interfaces still **cannot** have instance fields or instance constructors.
+- **CLR Dispatch Mechanics**:
+  - **Abstract Class**: Dispatched via a fixed **VTable slot** offset in the `MethodTable` (and eligible for JIT **devirtualization** when leaf classes like `FullTimeEmployee` and `Contractor` are `sealed`).
+  - **Interface**: Dispatched via **Virtual Stub Dispatch (VSD)** / **Interface Method Table (IMT)** lookup because unrelated types implement interfaces in different orders with no shared VTable index.
+- **Structs**: Value types (`struct`) cannot inherit from abstract classes, but can implement interfaces (casting to the interface type causes **boxing** unless constrained via generics `where T : IPayrollCalculable`).
+
+### Q5: Why does `CalculateMonthlyPayout()` appear in both `IPayrollCalculable` and `BaseEmployee` — doesn't that make it an identity?
+- **No — `CalculateMonthlyPayout()` is still the capability, not the identity.**
+- `BaseEmployee`'s **identity** comes from its shared state and invariants (`Id`, `Name`, `BaseSalary`, and constructor validation).
+- Because `BaseEmployee` declares `: IPayrollCalculable`, it promises callers that every `BaseEmployee` supports `CalculateMonthlyPayout()`. Since `BaseEmployee` is abstract and doesn't know each role's formula, it marks the method `abstract` (`public abstract decimal CalculateMonthlyPayout();`) to force concrete subclasses like `FullTimeEmployee` to provide the `override`.
+
 ---
 
 ## 5. Code Review Findings & Best Practices (Dynamically Updated)
@@ -297,3 +316,7 @@ public sealed class Contractor : IPayrollCalculable
 - **Prefer Composition & Interfaces over Deep Inheritance**: Keep class inheritance hierarchies to at most 1–2 levels deep. Use interfaces to compose orthogonal behaviors.
 - **Seal Concrete Classes**: Mark leaf implementations as `sealed` (e.g., `public sealed class FullTimeEmployee : BaseEmployee`).
 - **Enforce Invariants in Constructors**: Never expose public setters on base domain state; use `init` or `protected set` and validate in the constructor.
+- **Omit Redundant `public` on Interface Members**: Interface members are `public` by default (`decimal CalculateMonthlyPayout();`).
+- **Keep Namespaces Consistent & Constructors `protected` on Abstract Classes**: Ensure every domain file declares its `namespace` (avoiding accidental global-namespace types), and mark `abstract` class constructors `protected`.
+- **Prefer Explicit Constructors When Validating Inputs**: C# 12 primary constructors have no `{ ... }` body; when validating parameters (e.g., `BonusPercentage`, `HourlyRate`), an explicit constructor is cleaner and avoids split field-initializer/`init` validation bugs.
+- **Guard Mutable Setters & Use Proper Collection Initializers**: Validate mutable state like `Contractor.HoursWorked` (`ThrowIfNegative(value)`), and initialize `List<IPayrollCalculable>` with C# 12 collection expressions (`[...]`) containing valid interface instances.

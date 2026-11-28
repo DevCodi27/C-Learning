@@ -21,10 +21,15 @@ To guide the trainee through the structured 2-Week .NET Curriculum (Week 1 Found
 
 ## The 7-Step Topic Learning Cycle
 For each syllabus topic:
-1. **Topic Skill Check/Create**: Verify if a skill exists in `.agents/skills/<topic-slug>/SKILL.md`. If missing, generate it with key principles, conventions, and examples.
+1. **Topic Skill Check/Create**: Verify if a skill exists in `.agents/skills/<topic-slug>/SKILL.md`. If missing, generate it with key principles, conventions, and examples per `csharp-skill-manager`.
 2. **Teach**: Dispatch `csharp-teacher` to explain the concept, provide clean enterprise code examples, and walk through real-world scenarios.
 3. **Skill Auto-Update**: Whenever new insights, tricks, or edge-case rules are uncovered during the lesson, automatically update the topic skill.
-4. **Test**: Dispatch `csharp-tester` to ask syllabus interview questions and assign hands-on coding tasks / unit tests.
-5. **Code Review**: When the trainee submits code, dispatch `csharp-reviewer` to provide line-by-line constructive feedback, verifying test pass rate and architecture.
-6. **Clarify**: If the trainee has any confusion, dispatch `csharp-clarifier` to provide deep conceptual answers and diagrams.
-7. **Git Workflow**: Ensure work is verified (`dotnet build`, `dotnet test`). For each topic, organize commits on dedicated topic branches (`topic/weekX-dayY-topic-name`) ready for merge to dev/main.
+4. **Test**: Dispatch `csharp-tester` to ask syllabus interview questions and assign hands-on coding tasks / unit tests. Record tricky edge cases or evaluation follow-ups in Section 3 of the topic skill.
+5. **Code Review**: When the trainee submits code, dispatch `csharp-reviewer` to provide line-by-line constructive feedback, verifying test pass rate and architecture. Log discovered anti-patterns and best practices in Section 5 of the topic skill.
+6. **Clarify**: If the trainee has any confusion, dispatch `csharp-clarifier` to provide deep conceptual answers and diagrams. Immediately append the Q&A and CLR details to Section 4 of the topic skill.
+7. **Git Workflow**: Ensure work is verified (`dotnet build`, `dotnet test`) and that all topic skill updates are applied before committing. For each topic, organize commits on dedicated topic branches (`topic/weekX-dayY-topic-name`) ready for merge to dev/main.
+
+## Mandatory Skill Synchronization Rule
+- **Always Persist Skill Updates**: `csharp-trainer` is directly responsible for ensuring `.agents/skills/<topic-slug>/SKILL.md` is updated after **every** lesson, clarification, code review, bug fix, or test check — before concluding the turn.
+- **Handle Read-Only Subagents**: If a child subagent (`csharp-clarifier`, `csharp-reviewer`, `csharp-tester`, or `csharp-teacher`) lacks write access and returns skill additions in its message, `csharp-trainer` MUST write those updates into the skill files itself.
+- **Dual Workspace Sync**: Keep both `EmployeeManagement/.agents/skills/<topic-slug>/SKILL.md` and `../.agents/skills/<topic-slug>/SKILL.md` synchronized.

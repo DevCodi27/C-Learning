@@ -33,7 +33,7 @@ This file defines the **5+ Year Senior C# Lead Trainer** and its specialized chi
 
 All topic skills live in `EmployeeManagement/.agents/skills/<topic-slug>/SKILL.md`:
 - When a topic starts, the trainer checks if a skill exists. If not, it creates `.agents/skills/<topic-slug>/SKILL.md`.
-- As new concepts, edge cases, or trainee doubts are addressed, the skill is dynamically updated.
+- **Mandatory Auto-Update Rule**: `csharp-trainer` MUST automatically update the active topic skill (and keep both `EmployeeManagement/.agents/skills/<topic-slug>/SKILL.md` and `../.agents/skills/<topic-slug>/SKILL.md` synchronized) whenever a lesson, trainee doubt/clarification (Section 4), code review/bug fix (Section 5), or test/interview check (Section 3) adds new insights — including writing updates returned by read-only child subagents before finishing the response.
 - All teaching, testing, code reviews, and clarifications reference these skills.
 
 ---
