@@ -1,5 +1,4 @@
-using System.ComponentModel;
-using EmployeeManagement.Models;
+namespace EmployeeManagement.Models;
 
 public abstract class BaseEmployee : IPayrollCalculable
 {
@@ -7,10 +6,11 @@ public abstract class BaseEmployee : IPayrollCalculable
     public string Name { get; init; }
     public decimal BaseSalary { get; init; }
 
-    public BaseEmployee(int id, string name, decimal baseSalary)
+    protected BaseEmployee(int id, string name, decimal baseSalary)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(id); 
+        ArgumentOutOfRangeException.ThrowIfNegative(baseSalary);
 
         Id = id;
         Name = name;

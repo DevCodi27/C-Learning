@@ -3,6 +3,11 @@ using EmployeeManagement.Services;
 
 var employeeService = new EmployeeService();
 bool isContinue = true;
+List<IPayrollCalculable> payrollItems =
+[
+    new FullTimeEmployee(1, "Alice Johnson", 5000m, 10m),
+    new Contractor("Acme Consulting", 75m) { HoursWorked = 160 }
+];
 
 while (isContinue)
 {
@@ -15,8 +20,9 @@ while (isContinue)
     Console.WriteLine("5. Delete Employee");
     Console.WriteLine("6. Calculate Salary");
     Console.WriteLine("7. Calculate Annual Tax");
-    Console.WriteLine("8. Exit");
-    Console.Write("Enter your choice (1-8): ");
+    Console.WriteLine("8. Polymorphic Payroll (FTE & Contractor)");
+    Console.WriteLine("9. Exit");
+    Console.Write("Enter your choice (1-9): ");
 
     if (!int.TryParse(Console.ReadLine(), out int choice))
     {
@@ -48,13 +54,102 @@ while (isContinue)
             AnnualTax();
             break;
         case 8:
+            RunPolymorphicPayroll(payrollItems);
+            break;
+        case 9:
             Console.WriteLine("Exiting the program. Goodbye!");
             isContinue = false;
             break;
         default:
-            Console.WriteLine("Invalid choice. Please select a number between 1 and 8.");
+            Console.WriteLine("Invalid choice. Please select a number between 1 and 9.");
             break;
     }
+}
+
+void RunPolymorphicPayroll(List<IPayrollCalculable> items)
+{
+    Console.WriteLine("\n--- Polymorphic Payroll (FTE & Contractor) ---");
+    Console.WriteLine("1. View Payroll Summary");
+    Console.WriteLine("2. Add Full-Time Employee");
+    Console.WriteLine("3. Add Contractor");
+    Console.Write("Enter option (1-3): ");
+
+    string option = Console.ReadLine() ?? string.Empty;
+
+    if (option == "2")
+    {
+        Console.Write("Enter Employee ID: ");
+        if (!int.TryParse(Console.ReadLine(), out int id)) { Console.WriteLine("Invalid ID."); return; }
+
+        Console.Write("Enter Name: ");
+        string name = Console.ReadLine() ?? string.Empty;
+
+        Console.Write("Enter Base Salary: ");
+        if (!decimal.TryParse(Console.ReadLine(), out decimal baseSalary)) { Console.WriteLine("Invalid salary."); return; }
+
+        Console.Write("Enter Bonus Percentage: ");
+        if (!decimal.TryParse(Console.ReadLine(), out decimal bonusPct)) { Console.WriteLine("Invalid bonus percentage."); return; }
+
+        try
+        {
+            items.Add(new FullTimeEmployee(id, name, baseSalary, bonusPct));
+            Console.WriteLine("Full-time employee added to payroll!");
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"Validation error: {ex.Message}");
+        }
+        return;
+    }
+
+    if (option == "3")
+    {
+        Console.Write("Enter Company Name: ");
+        string companyName = Console.ReadLine() ?? string.Empty;
+
+        Console.Write("Enter Hourly Rate: ");
+        if (!decimal.TryParse(Console.ReadLine(), out decimal hourlyRate)) { Console.WriteLine("Invalid hourly rate."); return; }
+
+        Console.Write("Enter Hours Worked: ");
+        if (!int.TryParse(Console.ReadLine(), out int hoursWorked)) { Console.WriteLine("Invalid hours worked."); return; }
+
+        try
+        {
+            var contractor = new Contractor(companyName, hourlyRate) { HoursWorked = hoursWorked };
+            items.Add(contractor);
+            Console.WriteLine("Contractor added to payroll!");
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"Validation error: {ex.Message}");
+        }
+        return;
+    }
+
+    if (option != "1")
+    {
+        Console.WriteLine("Invalid option.");
+        return;
+    }
+
+    decimal totalPayout = 0m;
+
+    foreach (var item in items)
+    {
+        decimal payout = item.CalculateMonthlyPayout();
+        totalPayout += payout;
+
+        string label = item switch
+        {
+            FullTimeEmployee fte => $"FTE #{fte.Id} {fte.Name}",
+            Contractor c => $"Contractor ({c.CompanyName}, {c.HoursWorked} hrs)",
+            _ => "Unknown"
+        };
+
+        Console.WriteLine($"{label} => Monthly Payout: {payout:C}");
+    }
+
+    Console.WriteLine($"Total Monthly Payout: {totalPayout:C}");
 }
 
 string GetDepartment()
